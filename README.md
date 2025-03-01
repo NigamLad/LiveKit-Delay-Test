@@ -35,7 +35,17 @@ source .venv\bin\activate
 python .\Receiver.py
 ```
 
-### Run the Receiver
+### Run the Sender
 ```
 python .\Sender.py  
+```
+
+### Run the Video Receiver
+```
+python .\Video_Receiver.py
+```
+
+### Run the Video Sender
+```
+python .\Video_Sender.py  
 ```

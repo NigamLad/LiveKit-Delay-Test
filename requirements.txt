@@ -2,3 +2,4 @@ livekit
 livekit-api
 numpy
 python-dotenv
+opencv-python

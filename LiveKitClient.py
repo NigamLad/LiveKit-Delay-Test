@@ -19,6 +19,7 @@ class LiveKitClient():
         self.isConnected = asyncio.Event()
         self.exit = asyncio.Event()
         self.receiveQueue = asyncio.Queue(maxsize=2)
+        self.frameQueue = asyncio.Queue(maxsize=2)
 
         asyncio.create_task(self.mainEventLoop())
 
@@ -84,20 +85,38 @@ class LiveKitClient():
         # ):
         #     print(f"track unpublished: {publication.sid}")
 
-        # @self.room.on("track_subscribed")
-        # def on_track_subscribed(
-        #     track: rtc.Track,
-        #     publication: rtc.RemoteTrackPublication,
-        #     participant: rtc.RemoteParticipant,
-        # ):
-        #     print(f"track subscribed: {publication.sid}")
-        #     if track.kind == rtc.TrackKind.KIND_VIDEO:
-        #         _video_stream = rtc.VideoStream(track)
-        #         # video_stream is an async iterator that yields VideoFrame
-        #     elif track.kind == rtc.TrackKind.KIND_AUDIO:
-        #         print("Subscribed to an Audio Track")
-        #         _audio_stream = rtc.AudioStream(track)
-        #         # audio_stream is an async iterator that yields AudioFrame
+        @self.room.on("track_subscribed")
+        def on_track_subscribed(
+            track: rtc.Track,
+            publication: rtc.RemoteTrackPublication,
+            participant: rtc.RemoteParticipant,
+        ):
+            print(f"track subscribed: {publication.sid}")
+            if track.kind == rtc.TrackKind.KIND_VIDEO:
+                _video_stream = rtc.VideoStream(track)
+                # video_stream is an async iterator that yields VideoFrame
+                print(f"track subscribed: {publication.sid}")
+            if track.kind == rtc.TrackKind.KIND_VIDEO:
+                _video_stream = rtc.VideoStream(track, format=rtc.VideoBufferType.RGBA)
+                # video_stream is an async iterator that yields VideoFrame
+                
+                async def get_frames(_video_stream):
+                    async for frame_event in _video_stream:
+                        buffer = frame_event.frame
+                        print(buffer)
+                        arr = np.frombuffer(buffer.data, dtype=np.uint8)
+                        arr = arr.reshape((buffer.height, buffer.width, 4))
+                        try:
+                            self.frameQueue.put_nowait(arr)
+                        except asyncio.QueueFull:
+                            self.frameQueue.get_nowait()
+                            self.frameQueue.put_nowait(arr)
+
+                asyncio.create_task(get_frames(_video_stream))
+            elif track.kind == rtc.TrackKind.KIND_AUDIO:
+                print("Subscribed to an Audio Track")
+                _audio_stream = rtc.AudioStream(track)
+                # audio_stream is an async iterator that yields AudioFrame
 
         # @self.room.on("track_unsubscribed")
         # def on_track_unsubscribed(
